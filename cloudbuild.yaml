@@ -1,0 +1,22 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/chatcord-backend', '.' ]
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'push', 'gcr.io/$PROJECT_ID/chatcord-backend' ]
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - chatcord-backend
+      - --image
+      - gcr.io/$PROJECT_ID/chatcord-backend
+      - --region
+      - us-central1
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --set-env-vars
+      - REDIS_URL=$REDIS_URL
+      - MESSAGE_HISTORY_COUNT=$MESSAGE_HISTORY_COUNT
+timeout: 1200s
