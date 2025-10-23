@@ -1,26 +1,36 @@
 const users = [];
 
 // Join user to chat
-function userJoin(id, username, room) {
-  const user = { id, username, room };
-
-  users.push(user);
-
+function userJoin( socid, id, username, room) {
+  let user = users.find(user => user.id === id);
+  if (user) {
+    user.socid= socid;
+    user.username = username;
+    user.room = room;
+  } else {
+    user = { socid, id, username, room }
+    users.push(user);
+  }
+  
   return user;
 }
 
 // Get current user
-function getCurrentUser(id) {
-  return users.find(user => user.id === id);
+function getCurrentUser(socid) {
+  return users.find(user => user.socid === socid);
 }
 
 // User leaves chat
-function userLeave(id) {
-  const index = users.findIndex(user => user.id === id);
+function userLeave(socid) {
+  const index = users.findIndex(user => user.socid === socid);
 
   if (index !== -1) {
     return users.splice(index, 1)[0];
   }
+}
+
+var test = function(user) {
+  return user.id=id
 }
 
 // Get room users
@@ -28,7 +38,7 @@ function getRoomUsers(room) {
   return users.filter(user => user.room === room);
 }
 
-module.exports = {
+export {
   userJoin,
   getCurrentUser,
   userLeave,

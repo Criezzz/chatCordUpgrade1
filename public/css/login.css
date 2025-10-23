@@ -1,0 +1,38 @@
+h2 {
+    text-align: center;
+}
+
+.login-list {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.sign-in {
+    display: grid;
+    grid-template-columns: 50px auto;
+    align-items: center;
+    column-gap: 10px;
+    width: 350px;
+    height: 50px;
+    font: 1.4em sans-serif;
+    font-weight: 600;
+    margin-bottom: 10px;
+    padding: 0 10px;
+}
+
+.sign-in i {
+    grid-column: 1;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.sign-in span {
+    grid-column: 2;
+    text-align: left;
+}
