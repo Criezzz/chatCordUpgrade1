@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  redis:
+    image: redis:7
+    container_name: chatcord-redis
+    ports:
+      - "6379:6379"
+  backend:
+    build: .
+    container_name: chatcord-backend
+    environment:
+      - PORT=8080
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - MESSAGE_HISTORY_COUNT=100
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis

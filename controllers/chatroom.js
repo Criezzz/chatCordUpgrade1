@@ -1,6 +1,6 @@
 import formatMessage from "../utils/messages.js";
 import { userJoin, getCurrentUser, userLeave, getRoomUsers } from "../utils/users.js";
-import chatLimiter from "../configs/ratelimiter.js";
+import { initChatLimiter } from "../configs/ratelimiter.js";
 import messageService from "../services/messageService.js";
 
 const botName = "ChatCord Bot";
@@ -46,7 +46,10 @@ const getChat = (socket, io) => {
     }
     try {
       // Kiểm tra rate limit dựa trên user ID
-      await chatLimiter.consume(user.id);
+      const rl = await initChatLimiter();
+      if (rl && rl.consume) {
+        await rl.consume(user.id);
+      }
       // Lưu tin nhắn vào Redis
 
       await messageService.saveMessage(user.room, {
