@@ -13,11 +13,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-const authCheck = (callback) => {
-  onAuthStateChanged(auth, (user) => {
-    callback(user);
-  });
+await auth.authStateReady();
+
+const getUser = () => {
+  return auth.currentUser;
 }
 
 export default auth;
-export { authCheck };
+export { getUser };
