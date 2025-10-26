@@ -3,6 +3,7 @@
 This guide shows how to deploy the frontend to Firebase Hosting and the backend (Socket.IO + Node.js) to Cloud Run. It assumes you will use a hosted Redis (Upstash or Redis Cloud) for production instead of Memorystore to keep the setup simple.
 
 Prereqs:
+- Node.js v20+ (local development and Cloud Build image)
 - gcloud CLI installed and authenticated
 - firebase-tools installed and authenticated
 - Docker installed (for local build or Cloud Build)

@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Realtime chat app with rooms",
   "main": "app.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "type": "module",
   "scripts": {
     "start": "node app.js",
@@ -18,7 +21,8 @@
     "firebase-admin": "^13.5.0",
     "moment": "^2.24.0",
     "redis": "^4.0.2",
-    "socket.io": "^4.4.1"
+    "socket.io": "^4.4.1",
+    "rate-limiter-flexible": "^8.1.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.2"
