@@ -35,7 +35,8 @@ const joinRoom = (idToken) => {
 user.getIdToken(true).then(joinRoom);
 
 // ===== NHẬN LỊCH SỬ CHAT =====
-socket.on('chatHistory', (messages) => {
+
+const showHistoryMessages = (messages) => {
   console.log('Loading chat history:', messages.length, 'messages');
   
   // Xóa messages hiện tại (nếu có)
@@ -60,10 +61,12 @@ socket.on('chatHistory', (messages) => {
   chatMessages.appendChild(separator);
   // Scroll xuống cuối
   chatMessages.scrollTop = chatMessages.scrollHeight;
-});
+}
+
 // ===== KẾT THÚC NHẬN LỊCH SỬ =====
 
 const bindEventHandler = (socket) => {
+  socket.on('chatHistory', showHistoryMessages);
   // Get room and users
   socket.on('roomUsers', ({ room, users }) => {
     outputRoomName(room);

@@ -33,14 +33,10 @@ startRedis(io);
 
 
 io.on("connection", (socket) => {
-    bindEventHandler(socket, io);
-  } catch (e) {
-    console.error('Socket bind error:', e?.message || e);
-  }
-});
-
-io.on('connection', (socket) => {
+  
+  bindEventHandler(socket, io);
   console.log('new client', socket.id);
+  
   // catch lỗi trên socket
   socket.on('error', (err) => {
     console.error('socket error', socket.id, err && err.stack || err);
