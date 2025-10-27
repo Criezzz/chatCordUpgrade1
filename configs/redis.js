@@ -1,6 +1,9 @@
 // configs/redis.js
 import { createClient } from "redis";
 import { createAdapter } from "@socket.io/redis-adapter";
+import { config } from "dotenv";
+
+config();
 
 export async function startRedis(io) {
   const url = process.env.REDIS_URL;
