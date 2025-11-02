@@ -2,7 +2,7 @@ import admin from "firebase-admin";
 import fs from "fs";
 
 const serviceAccount = JSON.parse(
-  fs.readFileSync("./configs/serviceAccountKey.json", "utf8")
+  fs.readFileSync("./serviceAccount/device-streaming-443f3261-firebase-adminsdk-fbsvc-c8a830c8b0.json", "utf8")
 );
 
 
