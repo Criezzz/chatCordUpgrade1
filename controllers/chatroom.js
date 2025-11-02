@@ -8,6 +8,11 @@ const botName = "ChatCord Bot";
 const joinRoom = (socket, io) => {
   socket.on("joinRoom", async ({ uid, username, room }) => {
     const user = userJoin(socket.id, uid, username, room);
+    if (!user) {
+      socket.emit("message", formatMessage(botName, "You are already in a room."));
+      socket.disconnect();
+      return;
+    }
     socket.join(user.room);
     
     socket.emit("message", formatMessage(botName, "Welcome to ChatCord!"));
