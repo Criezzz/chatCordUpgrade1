@@ -1,5 +1,5 @@
 import { signInWithPopup, onAuthStateChanged, GoogleAuthProvider, FacebookAuthProvider } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-import auth, {getUser} from './auth.js'
+import auth, {authCheck} from './auth.js'
 
 const ggprovider = new GoogleAuthProvider();
 const fbprovider = new FacebookAuthProvider();
@@ -39,10 +39,11 @@ const facebookSignIn = async (e) => {
         });
 }
 
-const user = getUser();
-if (user) {
-    window.location.href = "/";
-}
+authCheck((user) => {
+  if (user) {
+    window.location.href = '/';
+  }
+});
 
 document.getElementById('google-login').addEventListener('click', googleSignIn);
 document.getElementById('facebook-login').addEventListener('click', facebookSignIn);

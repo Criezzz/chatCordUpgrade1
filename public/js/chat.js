@@ -1,44 +1,49 @@
-import auth, { getUser } from "./auth.js";
+import auth, {authCheck} from "./auth.js";
 
 const chatForm = document.getElementById('chat-form');
 const chatMessages = document.querySelector('.chat-messages');
 const roomName = document.getElementById('room-name');
 const userList = document.getElementById('users');
-const SOFT_DELAY = 250;
-const lastMsg = {
-  time: 0,
-  msg: "",
-}
 
 // Get username and room from URL
 const { username, room } = Qs.parse(location.search, {
   ignoreQueryPrefix: true,
 });
 
+const socket = io();
+
 // Biến quản lý rate limit
 let isRateLimited = false;
 let rateLimitMessageTimeout = null;
 
-const user = getUser();
-const uid = user.uid;
-// Join chatroom
+authCheck((user) => {
+  if (!user) {
+    window.location.href = "/login";
+  }
+});
 
-const joinRoom = (idToken) => {
-  const socket = io({ auth: {
-    token: idToken,
-  }});
-  console.log(idToken)
-  console.log(uid, username, room);
-  bindEventHandler(socket);
-  startEventListener(socket);
+// Join chatroom
+const joinRoom = () => {
   socket.emit('joinRoom', { uid, username, room });
 }
 
-user.getIdToken(true).then(joinRoom);
+let uid = sessionStorage.getItem("uid");
+if (!uid) {
+  authCheck((user) => {
+    if (!user) {
+      window.location.href = "/login";
+    } else {
+      uid = user.uid;
+      sessionStorage.setItem('uid', uid);
+      joinRoom();
+    }
+  })
+} else {
+  joinRoom();
+}
 
 // ===== NHẬN LỊCH SỬ CHAT =====
-
-const showHistoryMessages = (messages) => {
+socket.on('chatHistory', (messages) => {
   console.log('Loading chat history:', messages.length, 'messages');
   
   // Xóa messages hiện tại (nếu có)
@@ -63,138 +68,111 @@ const showHistoryMessages = (messages) => {
   chatMessages.appendChild(separator);
   // Scroll xuống cuối
   chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
+});
 // ===== KẾT THÚC NHẬN LỊCH SỬ =====
 
-const bindEventHandler = (socket) => {
-  socket.on('chatHistory', showHistoryMessages);
-  // Get room and users
-  socket.on('roomUsers', ({ room, users }) => {
-    outputRoomName(room);
-    outputUsers(users);  
-  });
-  
-  // Message from server
-  socket.on('message', (message) => {
-    // Kiểm tra xem có phải là message rate limit từ bot không
-    const isRateLimitMessage = message.username === 'ChatCord Bot' && 
-                                message.text.includes('sending messages too fast');
-    outputMessage(message);
-  
-    // Scroll down
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+// Get room and users
+socket.on('roomUsers', ({ room, users }) => {
+  outputRoomName(room);
+  outputUsers(users);
+});
 
-    if (isRateLimitMessage) {
-      isRateLimited = true;
-      
-      // Disable form
-      const messageInput = chatForm.elements.msg;
-      const submitBtn = chatForm.querySelector('button[type="submit"]');
-      if (messageInput) messageInput.disabled = true;
-      if (submitBtn) submitBtn.disabled = true;
-      
-      // Lấy message element vừa tạo
-      const lastMessage = chatMessages.lastElementChild;
-      
-      // Tự động xóa message sau 3 giây
-      rateLimitMessageTimeout = setTimeout(() => {
+// Message from server
+socket.on('message', (message) => {
+  // Kiểm tra xem có phải là message rate limit từ bot không
+  const isRateLimitMessage = message.username === 'ChatCord Bot' && 
+                             message.text.includes('sending messages too fast');
+  
+  outputMessage(message, isRateLimitMessage);
+  
+  // Scroll down
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  // Nếu là rate limit message, tự động xóa sau 3 giây
+  if (isRateLimitMessage) {
+    isRateLimited = true;
+    
+    // Disable form
+    const messageInput = chatForm.elements.msg;
+    const submitBtn = chatForm.querySelector('button[type="submit"]');
+    if (messageInput) messageInput.disabled = true;
+    if (submitBtn) submitBtn.disabled = true;
+    
+    // Lấy message element vừa tạo
+    const lastMessage = chatMessages.lastElementChild;
+    
+    // Tự động xóa message sau 3 giây
+    rateLimitMessageTimeout = setTimeout(() => {
       if (lastMessage && lastMessage.parentNode) {
-          lastMessage.classList.add('fade-out');
-          
-          setTimeout(() => {
+        lastMessage.classList.add('fade-out');
+        
+        setTimeout(() => {
           lastMessage.remove();
-          }, 300);
+        }, 300);
       }
       
       // Enable lại form
       isRateLimited = false;
       if (messageInput) messageInput.disabled = false;
       if (submitBtn) submitBtn.disabled = false;
-      }, 3000);
-    }
-  });
-
-  // Lắng nghe sự kiện rate limit từ server
-  socket.on('rateLimitExceeded', (data) => {
-    console.log('Rate limit exceeded:', data);
-  });
-}
-
-const startEventListener = (socket) => {
-  // Message submit
-  chatForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    // Get message text
-
-    // Kiểm tra rate limit
-    if (isRateLimited) {
-      return false;
-    }
-
-    let msg = getMsg(e);
-    if (!msg) {
-      return false;
-    }
-    sendMsgWithLimitCheck(e, msg, socket);
-  });
-}
-
-const getMsg = (e) => {
-    // Get message text
-    let msg = e.target.elements.msg.value;
-    msg = msg.trim();
-    return msg
-}
-
-const sendMsgWithLimitCheck = (e, msg, socket) => {
-  const now = Date.now();
-  if (now - lastMsg.time < SOFT_DELAY) {
-    alert("Too fast. Try again later")
-  } else {
-    // Emit message to server
-    socket.emit('chatMessage', msg);
-
-    // Clear input
-    e.target.elements.msg.value = '';
-    e.target.elements.msg.focus();
-    lastMsg.time = now;
-    lastMsg.msg = msg;
+    }, 3000);
   }
-}
+});
 
-const trimOldMsg = (container) => {
-  if (container.childElementCount > 100) {
-    container.removeChild(container.getElementsByTagName('div')[0])
+// Lắng nghe sự kiện rate limit từ server
+socket.on('rateLimitExceeded', (data) => {
+  console.log('Rate limit exceeded:', data);
+});
+
+// Message submit
+chatForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  
+  // Kiểm tra rate limit
+  if (isRateLimited) {
+    return false;
   }
-}
+  
+  // Get message text
+  let msg = e.target.elements.msg.value;
+  msg = msg.trim();
+  if (!msg) {
+    return false;
+  }
+  
+  // Emit message to server
+  socket.emit('chatMessage', msg);
+  
+  // Clear input
+  e.target.elements.msg.value = '';
+  e.target.elements.msg.focus();
+});
 
-const createMsgToast = (message) => {
+// Output message to DOM
+function outputMessage(message, isRateLimitWarning = false, isHistoryMessage = false) {
   const div = document.createElement('div');
   div.classList.add('message');
-
+  
+  // Thêm class đặc biệt
+  if (isRateLimitWarning) {
+    div.classList.add('rate-limit-message');
+  }
+  if (isHistoryMessage) {
+    div.classList.add('history-message');
+  }
+  
   const p = document.createElement('p');
   p.classList.add('meta');
   p.innerText = message.username;
   p.innerHTML += `<span>${message.time}</span>`;
-  
   div.appendChild(p);
   
   const para = document.createElement('p');
   para.classList.add('text');
   para.innerText = message.text;
-  
   div.appendChild(para);
-
-  return div
-}
-
-// Output message to DOM
-function outputMessage(message) {
-  const container = document.querySelector('.chat-messages')
-  const div = createMsgToast(message)
-  trimOldMsg(container);
-  container.appendChild(div);
+  
+  document.querySelector('.chat-messages').appendChild(div);
 }
 
 // Format time từ ISO string hoặc timestamp

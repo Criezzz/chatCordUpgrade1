@@ -1,10 +1,11 @@
-import auth, { getUser } from "./auth.js";
+import auth, { authCheck } from "./auth.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
 
-const user = getUser();
-if (!user) {
-  window.location.href = '/login';
-}
+authCheck((user) => {
+  if (!user) {
+    window.location.href = '/login';
+  }
+});
 
 const logout = () => {
     signOut(auth).then(() => {

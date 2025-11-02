@@ -6,7 +6,6 @@ import makepath from "./configs/path.js";
 import initSocketIo from "./configs/socketio.js";
 import { startRedis } from "./configs/redis.js";
 import bindEventHandler from "./controllers/chatroom.js";
-import { authenticate, checkBlock } from "./middlewares/auth.js";
 
 // Early diagnostics to help Cloud Run troubleshooting
 console.log(`[boot] Node ${process.version} starting app.js`);
@@ -27,32 +26,27 @@ app.get('/_ah/health', (req, res) => res.status(200).send('ok'));
 
 const server = http.createServer(app);
 const io = initSocketIo(server);
-io.use(checkBlock);
-io.use(authenticate);
-startRedis(io);
 
-
-io.on("connection", (socket) => {
-  
-  bindEventHandler(socket, io);
-  console.log('new client', socket.id);
-  
-  // catch lỗi trên socket
-  socket.on('error', (err) => {
-    console.error('socket error', socket.id, err && err.stack || err);
-  });
-
-  socket.on('someEvent', (data) => {
-    try {
-      // xử lý
-    } catch (err) {
-      console.error('handler error for someEvent', err && err.stack || err);
-    }
-  });
-
-  socket.on('disconnect', (reason) => {
-    console.log('disconnect', socket.id, reason);
-  });
+// bind socket handlers
+io.on('connection', (socket) => {
+  try {
+    bindEventHandler(socket, io);
+  } catch (e) {
+    console.error('Socket bind error:', e?.message || e);
+  }
 });
- 
-server.listen(3000, () => console.log("Server running on port 3000"));
+
+// start Redis adapter (non-blocking)
+try {
+  // fire and forget; internal code handles failures without crashing server
+  // no await here to ensure the HTTP server starts immediately
+  startRedis(io);
+} catch (e) {
+  console.error('startRedis failed:', e?.message || e);
+}
+
+// QUAN TRỌNG: dùng PORT của Cloud Run và bind 0.0.0.0
+const PORT = Number(process.env.PORT) || 8080;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});

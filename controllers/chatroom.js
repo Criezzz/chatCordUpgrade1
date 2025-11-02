@@ -8,11 +8,6 @@ const botName = "ChatCord Bot";
 const joinRoom = (socket, io) => {
   socket.on("joinRoom", async ({ uid, username, room }) => {
     const user = userJoin(socket.id, uid, username, room);
-    if (!user) {
-      socket.emit("message", formatMessage(botName, "You are already in a room."));
-      socket.disconnect();
-      return;
-    }
     socket.join(user.room);
     
     socket.emit("message", formatMessage(botName, "Welcome to ChatCord!"));
@@ -91,13 +86,15 @@ const getChat = (socket, io) => {
       io.to(user.room).emit("message", formatMessage(user.username, msg));
       
     } catch (rateLimiterRes) {
-      socket.emit(
-        "message",
-        formatMessage(
-          botName,
-          `You are sending your message too fast! Please wait a few seconds.`
-        )
-      );
+      // Rate limit exceeded - có thể uncomment để thông báo
+      // socket.emit(
+      //   "message",
+      //   formatMessage(
+      //     botName,
+      //     `You are sending messages too fast! Please wait a few seconds.`
+      //   )
+      // );
+      console.log(`Rate limit hit for user ${user.username}`);
     }
   });
 };
