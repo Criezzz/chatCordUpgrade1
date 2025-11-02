@@ -21,6 +21,7 @@ const joinRoom = (socket, io) => {
       
       if (chatHistory.length > 0) {
         // Gửi lịch sử chat cho user vừa join
+        console.log(`[joinRoom] Emitting chatHistory to ${user.username} in room ${user.room} (count=${chatHistory.length})`);
         socket.emit("chatHistory", chatHistory);
       } else {
         console.log(`No chat history found for room=${user.room}`);
