@@ -111,6 +111,14 @@ a {
 	color: #777;
 }
 
+/* Separator for history block */
+.chat-messages .history-separator {
+	text-align: center;
+	color: #777;
+	font-size: 12px;
+	margin: 8px 0 16px 0;
+}
+
 .chat-form-container {
 	padding: 20px 30px;
 	background-color: var(--dark-color-a);

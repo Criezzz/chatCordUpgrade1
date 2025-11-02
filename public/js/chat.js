@@ -179,10 +179,10 @@ function outputMessage(message, isRateLimitWarning = false, isHistoryMessage = f
 function formatTime(timeString) {
   try {
     const date = new Date(timeString);
-    return date.toLocaleTimeString('vi-VN', { 
-      hour: '2-digit', 
+    return date.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
       minute: '2-digit',
-      amPm: 'true' 
+      hour12: true
     });
   } catch (e) {
     return timeString;

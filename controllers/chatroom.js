@@ -9,17 +9,22 @@ const joinRoom = (socket, io) => {
   socket.on("joinRoom", async ({ uid, username, room }) => {
     const user = userJoin(socket.id, uid, username, room);
     socket.join(user.room);
-    socket.emit("message", formatMessage(botName, "Welcome to ChatCord!"));
     try {
       // Lấy 50 tin nhắn gần nhất trong 7 ngày
-      const chatHistory = await messageService.getMessages(user.room, 7, 50);
+      const HISTORY_COUNT = Number(process.env.MESSAGE_HISTORY_COUNT) || 50;
+      const chatHistory = await messageService.getMessages(user.room, 7, HISTORY_COUNT);
       if (chatHistory.length > 0) {
         // Gửi lịch sử chat cho user vừa join
+        console.log(`[joinRoom] Emitting chatHistory to ${user.username} in room ${user.room} (count=${chatHistory.length})`);
         socket.emit("chatHistory", chatHistory);
+      } else {
+        console.log(`[joinRoom] No chat history for room ${user.room}`);
       }
     } catch (error) {
       console.error("Error loading chat history:", error);
     }
+    // Gửi lời chào sau khi đã gửi lịch sử để không bị clear bởi handler client
+    socket.emit("message", formatMessage(botName, "Welcome to ChatCord!"));
     socket.broadcast
       .to(user.room)
       .emit(
