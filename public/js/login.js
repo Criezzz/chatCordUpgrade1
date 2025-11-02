@@ -1,8 +1,7 @@
 import { signInWithPopup, onAuthStateChanged, GoogleAuthProvider, FacebookAuthProvider } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-import auth, {authCheck} from './auth.js'
+import auth, { getUser } from './auth.js'
 
 const ggprovider = new GoogleAuthProvider();
-const fbprovider = new FacebookAuthProvider();
 const googleSignIn = async (e) => {
     return signInWithPopup(auth, ggprovider)
         .then((result) => {

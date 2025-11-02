@@ -4,13 +4,16 @@ const chatForm = document.getElementById('chat-form');
 const chatMessages = document.querySelector('.chat-messages');
 const roomName = document.getElementById('room-name');
 const userList = document.getElementById('users');
+const SOFT_DELAY = 1000;
+const lastMsg = {
+  time: 0,
+  msg: "",
+}
 
 // Get username and room from URL
 const { username, room } = Qs.parse(location.search, {
   ignoreQueryPrefix: true,
 });
-
-const socket = io();
 
 // Biến quản lý rate limit
 let isRateLimited = false;
@@ -34,116 +37,134 @@ const joinRoom = (idToken) => {
 user.getIdToken(true).then(joinRoom);
 
 // ===== NHẬN LỊCH SỬ CHAT =====
-socket.on('chatHistory', (messages) => {
-  console.log('Loading chat history:', messages.length, 'messages');
-  
-  // Xóa messages hiện tại (nếu có)
-  chatMessages.innerHTML = '';
-  
-  // Hiển thị separator cho lịch sử chat
-  const separator = document.createElement('div');
-  separator.className = 'history-separator';
-  separator.innerHTML = `
-    <span>━━━━━ Lịch sử chat (${messages.length} tin nhắn) ━━━━━</span>
-  `;
-  
-  // Hiển thị từng message
-  messages.forEach(msg => {
-    outputMessage({
-      username: msg.username,
-      text: msg.text,
-      time: formatTime(msg.time)
-    }, false, true); // Tham số thứ 3: isHistoryMessage
-  });
-  
-  chatMessages.appendChild(separator);
-  // Scroll xuống cuối
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-});
+const showHistoryMessages = (messages) => {
+    console.log('Loading chat history:', messages.length, 'messages');
+    
+    // Xóa messages hiện tại (nếu có)
+    chatMessages.innerHTML = '';
+    
+    // Hiển thị separator cho lịch sử chat
+    const separator = document.createElement('div');
+    separator.className = 'history-separator';
+    separator.innerHTML = `
+      <span>━━━━━ Lịch sử chat (${messages.length} tin nhắn) ━━━━━</span>
+    `;
+    
+    // Hiển thị từng message
+    messages.forEach(msg => {
+      outputMessage({
+        username: msg.username,
+        text: msg.text,
+        time: formatTime(msg.time)
+      }, false, true); // Tham số thứ 3: isHistoryMessage
+    });
+    
+    chatMessages.appendChild(separator);
+    // Scroll xuống cuối
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
 // ===== KẾT THÚC NHẬN LỊCH SỬ =====
 
-// Get room and users
-socket.on('roomUsers', ({ room, users }) => {
-  outputRoomName(room);
-  outputUsers(users);
-});
+const bindEventHandler = (socket) => {
+  socket.on('chatHistory', showHistoryMessages);
+  // Get room and users
+  socket.on('roomUsers', ({ room, users }) => {
+    outputRoomName(room);
+    outputUsers(users);  
+  });
+  
+  // Message from server
+  socket.on('message', (message) => {
+    // Kiểm tra xem có phải là message rate limit từ bot không
+    const isRateLimitMessage = message.username === 'ChatCord Bot' && 
+                                message.text.includes('sending messages too fast');
+    outputMessage(message, isRateLimitMessage);
+  
+    // Scroll down
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 
-// Message from server
-socket.on('message', (message) => {
-  // Kiểm tra xem có phải là message rate limit từ bot không
-  const isRateLimitMessage = message.username === 'ChatCord Bot' && 
-                             message.text.includes('sending messages too fast');
-  
-  outputMessage(message, isRateLimitMessage);
-  
-  // Scroll down
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-  
-  // Nếu là rate limit message, tự động xóa sau 3 giây
-  if (isRateLimitMessage) {
-    isRateLimited = true;
-    
-    // Disable form
-    const messageInput = chatForm.elements.msg;
-    const submitBtn = chatForm.querySelector('button[type="submit"]');
-    if (messageInput) messageInput.disabled = true;
-    if (submitBtn) submitBtn.disabled = true;
-    
-    // Lấy message element vừa tạo
-    const lastMessage = chatMessages.lastElementChild;
-    
-    // Tự động xóa message sau 3 giây
-    rateLimitMessageTimeout = setTimeout(() => {
+    if (isRateLimitMessage) {
+      isRateLimited = true;
+      
+      // Disable form
+      const messageInput = chatForm.elements.msg;
+      const submitBtn = chatForm.querySelector('button[type="submit"]');
+      if (messageInput) messageInput.disabled = true;
+      if (submitBtn) submitBtn.disabled = true;
+      
+      // Lấy message element vừa tạo
+      const lastMessage = chatMessages.lastElementChild;
+      
+      // Tự động xóa message sau 3 giây
+      rateLimitMessageTimeout = setTimeout(() => {
       if (lastMessage && lastMessage.parentNode) {
-        lastMessage.classList.add('fade-out');
-        
-        setTimeout(() => {
+          lastMessage.classList.add('fade-out');
+          
+          setTimeout(() => {
           lastMessage.remove();
-        }, 300);
+          }, 300);
       }
       
       // Enable lại form
       isRateLimited = false;
       if (messageInput) messageInput.disabled = false;
       if (submitBtn) submitBtn.disabled = false;
-    }, 3000);
-  }
-});
+      }, 3000);
+    }
+  });
 
-// Lắng nghe sự kiện rate limit từ server
-socket.on('rateLimitExceeded', (data) => {
-  console.log('Rate limit exceeded:', data);
-});
+  // Lắng nghe sự kiện rate limit từ server
+  socket.on('rateLimitExceeded', (data) => {
+    console.log('Rate limit exceeded:', data);
+  });
+}
 
-// Message submit
-chatForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  
-  // Kiểm tra rate limit
-  if (isRateLimited) {
-    return false;
-  }
-  
-  // Get message text
-  let msg = e.target.elements.msg.value;
-  msg = msg.trim();
-  if (!msg) {
-    return false;
-  }
-  
-  // Emit message to server
-  socket.emit('chatMessage', msg);
-  
-  // Clear input
-  e.target.elements.msg.value = '';
-  e.target.elements.msg.focus();
-});
+const startEventListener = (socket) => {
+  // Message submit
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    // Get message text
 
-// Output message to DOM
-function outputMessage(message, isRateLimitWarning = false, isHistoryMessage = false) {
+    // Kiểm tra rate limit
+    if (isRateLimited) {
+      return false;
+    }
+
+    let msg = getMsg(e);
+    if (!msg) {
+      return false;
+    }
+    sendMsgWithLimitCheck(e, msg, socket);
+  });
+}
+
+const getMsg = (e) => {
+    // Get message text
+    let msg = e.target.elements.msg.value;
+    msg = msg.trim();
+    return msg
+}
+
+const sendMsgWithLimitCheck = (e, msg, socket) => {
+  const now = Date.now();
+  if (now - lastMsg.time < SOFT_DELAY) {
+    alert("Too fast. Try again later")
+  } else {
+    // Emit message to server
+    socket.emit('chatMessage', msg);
+
+    // Clear input
+    e.target.elements.msg.value = '';
+    e.target.elements.msg.focus();
+    lastMsg.time = now;
+    lastMsg.msg = msg;
+  }
+}
+
+const createMsgToast = (message, isRateLimitWarning, isHistoryMessage) => {
   const div = document.createElement('div');
   div.classList.add('message');
-  
+
   // Thêm class đặc biệt
   if (isRateLimitWarning) {
     div.classList.add('rate-limit-message');
@@ -151,19 +172,35 @@ function outputMessage(message, isRateLimitWarning = false, isHistoryMessage = f
   if (isHistoryMessage) {
     div.classList.add('history-message');
   }
-  
+
   const p = document.createElement('p');
   p.classList.add('meta');
   p.innerText = message.username;
   p.innerHTML += `<span>${message.time}</span>`;
+  
   div.appendChild(p);
   
   const para = document.createElement('p');
   para.classList.add('text');
   para.innerText = message.text;
-  div.appendChild(para);
   
-  document.querySelector('.chat-messages').appendChild(div);
+  div.appendChild(para);
+
+  return div
+}
+
+const trimOldMsg = (container) => {
+  if (container.childElementCount > 100) {
+    container.removeChild(container.getElementsByTagName('div')[0])
+  }
+}
+
+// Output message to DOM
+function outputMessage(message, isRateLimitWarning = false, isHistoryMessage = false) {
+  const container = document.querySelector('.chat-messages')
+  const div = createMsgToast(message, isRateLimitWarning, isHistoryMessage)
+  trimOldMsg(container);
+  container.appendChild(div);
 }
 
 // Format time từ ISO string hoặc timestamp

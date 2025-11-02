@@ -4,8 +4,9 @@ import authRoute from './routes/auth.js';
 import homeRoute from './routes/home.js';
 import makepath from "./configs/path.js";
 import initSocketIo from "./configs/socketio.js";
-import { startRedis } from "./configs/redis.js";
+import pubClient, { bindAdapter } from "./configs/redis.js";
 import bindEventHandler from "./controllers/chatroom.js";
+import { checkBlock, authenticate } from "./middlewares/auth.js";
 
 // Early diagnostics to help Cloud Run troubleshooting
 console.log(`[boot] Node ${process.version} starting app.js`);
@@ -43,7 +44,7 @@ io.on('connection', (socket) => {
 try {
   // fire and forget; internal code handles failures without crashing server
   // no await here to ensure the HTTP server starts immediately
-  startRedis(io);
+  await bindAdapter(pubClient, io);
 } catch (e) {
   console.error('startRedis failed:', e?.message || e);
 }
