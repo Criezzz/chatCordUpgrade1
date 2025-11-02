@@ -27,6 +27,8 @@ const joinRoom = (idToken) => {
   const socket = io({ auth: {
     token: idToken,
   }});
+  console.log(idToken)
+  console.log(uid, username, room);
   bindEventHandler(socket);
   startEventListener(socket);
   socket.emit('joinRoom', { uid, username, room });
