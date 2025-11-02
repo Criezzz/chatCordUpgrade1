@@ -26,6 +26,9 @@ app.get('/_ah/health', (req, res) => res.status(200).send('ok'));
 
 const server = http.createServer(app);
 const io = initSocketIo(server);
+io.use(checkBlock);
+io.use(authenticate);
+
 
 // bind socket handlers
 io.on('connection', (socket) => {

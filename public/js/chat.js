@@ -1,4 +1,4 @@
-import auth, {authCheck} from "./auth.js";
+import { getUser } from "./auth.js";
 
 const chatForm = document.getElementById('chat-form');
 const chatMessages = document.querySelector('.chat-messages');
@@ -16,31 +16,22 @@ const socket = io();
 let isRateLimited = false;
 let rateLimitMessageTimeout = null;
 
-authCheck((user) => {
-  if (!user) {
-    window.location.href = "/login";
-  }
-});
-
+const user = getUser();
+const uid = user.uid;
 // Join chatroom
-const joinRoom = () => {
+
+const joinRoom = (idToken) => {
+  const socket = io({ auth: {
+    token: idToken,
+  }});
+  console.log(idToken)
+  console.log(uid, username, room);
+  bindEventHandler(socket);
+  startEventListener(socket);
   socket.emit('joinRoom', { uid, username, room });
 }
 
-let uid = sessionStorage.getItem("uid");
-if (!uid) {
-  authCheck((user) => {
-    if (!user) {
-      window.location.href = "/login";
-    } else {
-      uid = user.uid;
-      sessionStorage.setItem('uid', uid);
-      joinRoom();
-    }
-  })
-} else {
-  joinRoom();
-}
+user.getIdToken(true).then(joinRoom);
 
 // ===== NHẬN LỊCH SỬ CHAT =====
 socket.on('chatHistory', (messages) => {
