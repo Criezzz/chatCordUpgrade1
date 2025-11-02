@@ -15,7 +15,6 @@ const verifyIdToken = async (token) => {
 const authenticate = async (socket, next) => {
     const token = socket.handshake.auth?.token;
     const ip = socket.handshake.address;
-
     if (!token) {
         await blacklist(ip);
         return next(new Error('Invalid access'))
