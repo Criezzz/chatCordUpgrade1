@@ -1,13 +1,20 @@
 import admin from "firebase-admin";
-import fs from "fs";
 
-const serviceAccount = JSON.parse(
-  fs.readFileSync("./serviceAccount/device-streaming-443f3261-firebase-adminsdk-fbsvc-c8a830c8b0.json", "utf8")
-);
+// Read service account from environment variable (injected by Secret Manager)
+// Expected format: JSON string of the service account key
+const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
+if (!serviceAccountJson) {
+  throw new Error(
+    "FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set. " +
+    "Please configure Cloud Run to inject the secret from Secret Manager."
+  );
+}
 
-admin.initializeApp(
-    { credential: admin.credential.cert(serviceAccount) }
-)
+const serviceAccount = JSON.parse(serviceAccountJson);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 export default admin;

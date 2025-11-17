@@ -15,15 +15,9 @@ steps:
       - --region=asia-east2
       - --platform=managed
       - --set-env-vars=REDIS_URL=${_REDIS_URL},MESSAGE_HISTORY_COUNT=${_MESSAGE_HISTORY_COUNT}
-      - --set-secrets=FIREBASE_SERVICE_ACCOUNT=firebase-sa:latest
+      - --set-secrets=FIREBASE_SERVICE_ACCOUNT_JSON=firebase-sa:latest
       - --allow-unauthenticated
       - --quiet
-
-timeout: 1200s
-
-substitutions:
-  _REDIS_URL: "rediss://default:AYplAAIncDE4MzM2NmZjZTc1MDU0OTlmOWI5YmFiNTFhNGEyOTI5NnAxMzU0Mjk@wealthy-magpie-35429.upstash.io:6379"
-  _MESSAGE_HISTORY_COUNT: "100"
 
 timeout: 1200s
 

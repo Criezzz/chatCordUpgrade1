@@ -84,7 +84,7 @@ const getChat = (socket, io) => {
         time: new Date().toISOString(), // ISO format cho time display
       };
 
-      // Lưu tin nhắn vào Redis (KHÔNG delete ở đây!)
+      // Lưu tin nhắn vào Redis 
       await messageService.saveMessage(user.room, messageData);
 
       // Gửi tin nhắn đến tất cả users trong room

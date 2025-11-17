@@ -27,6 +27,15 @@ yarn-error.log*
 # Environment files (local configs)
 /.env.*
 
+# Service account keys (sensitive)
+serviceAccount/
+*.json
+!package.json
+!package-lock.json
+!firebase.json
+!tsconfig.json
+
 node_modules/
 .DS_Store
 .env
+
