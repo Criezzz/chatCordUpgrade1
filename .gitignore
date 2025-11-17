@@ -39,3 +39,4 @@ node_modules/
 .DS_Store
 .env
 
+serviceAccount/device-streaming-443f3261-firebase-adminsdk-fbsvc-c8a830c8b0.json
