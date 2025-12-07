@@ -3,7 +3,7 @@ import { getUser } from "./auth.js";
 const chatForm = document.getElementById('chat-form');
 const chatMessages = document.querySelector('.chat-messages');
 const roomName = document.getElementById('room-name');
-const userList = document.getElementById('users');
+const userCount = document.getElementById('user-count');
 const SOFT_DELAY = 1000;
 const lastMsg = {
   time: 0,
@@ -21,20 +21,132 @@ let rateLimitMessageTimeout = null;
 
 const user = getUser();
 const uid = user.uid;
-// Join chatroom
 
+// Initialize Web Worker
+let chatWorker = null;
+
+// Join chatroom
 const joinRoom = (idToken) => {
-  const socket = io({ auth: {
-    token: idToken,
-  }});
-  console.log(idToken)
-  console.log(uid, username, room);
-  bindEventHandler(socket);
-  startEventListener(socket);
-  socket.emit('joinRoom', { uid, username, room });
+  // Create worker
+  chatWorker = new Worker('/js/chat-worker.js');
+  
+  // Setup worker message handler
+  setupWorkerHandlers();
+  
+  // Initialize socket in worker
+  chatWorker.postMessage({
+    type: 'INIT_SOCKET',
+    data: {
+      url: window.location.origin,
+      token: idToken
+    }
+  });
+  
+  // Join room after socket connects
+  setTimeout(() => {
+    chatWorker.postMessage({
+      type: 'JOIN_ROOM',
+      data: { uid, username, room }
+    });
+  }, 500);
 }
 
 user.getIdToken(true).then(joinRoom);
+
+// Setup worker event handlers
+function setupWorkerHandlers() {
+  chatWorker.onmessage = function(e) {
+    const { type, data } = e.data;
+    
+    switch(type) {
+      case 'SOCKET_CONNECTED':
+        console.log('Socket connected:', data.socketId);
+        break;
+      
+      case 'MESSAGE_RECEIVED':
+        handleMessageReceived(data);
+        break;
+      
+      case 'CHAT_HISTORY':
+        showHistoryMessages(data);
+        break;
+      
+      case 'ROOM_USERS':
+        outputRoomName(data.room);
+        outputUsers(data.usercount);
+        break;
+      
+      case 'RATE_LIMIT_EXCEEDED':
+        handleRateLimitExceeded(data);
+        break;
+      
+      case 'MESSAGE_SENT':
+        console.log('Message sent:', data);
+        break;
+      
+      case 'SOCKET_DISCONNECTED':
+        console.log('Socket disconnected');
+        break;
+      
+      case 'SOCKET_ERROR':
+        console.error('Socket error:', data.error);
+        break;
+    }
+  };
+
+  chatWorker.onerror = function(error) {
+    console.error('Worker error:', error);
+  };
+}
+
+// Handle received message
+function handleMessageReceived(message) {
+  const isRateLimitMessage = message.username === 'ChatCord Bot' && 
+                              message.text.includes('sending messages too fast');
+  outputMessage(message, isRateLimitMessage);
+
+  // Scroll down
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  if (isRateLimitMessage) {
+    handleRateLimitMessage();
+  }
+}
+
+// Handle rate limit message
+function handleRateLimitMessage() {
+  isRateLimited = true;
+  
+  // Disable form
+  const messageInput = chatForm.elements.msg;
+  const submitBtn = chatForm.querySelector('button[type="submit"]');
+  if (messageInput) messageInput.disabled = true;
+  if (submitBtn) submitBtn.disabled = true;
+  
+  // Lấy message element vừa tạo
+  const lastMessage = chatMessages.lastElementChild;
+  
+  // Tự động xóa message sau 3 giây
+  rateLimitMessageTimeout = setTimeout(() => {
+    if (lastMessage && lastMessage.parentNode) {
+      lastMessage.classList.add('fade-out');
+      
+      setTimeout(() => {
+        lastMessage.remove();
+      }, 300);
+    }
+    
+    // Enable lại form
+    isRateLimited = false;
+    if (messageInput) messageInput.disabled = false;
+    if (submitBtn) submitBtn.disabled = false;
+  }, 3000);
+}
+
+// Handle rate limit exceeded
+function handleRateLimitExceeded(data) {
+  console.log('Rate limit exceeded:', data);
+}
 
 // ===== NHẬN LỊCH SỬ CHAT =====
 const showHistoryMessages = (messages) => {
@@ -56,102 +168,47 @@ const showHistoryMessages = (messages) => {
         username: msg.username,
         text: msg.text,
         time: formatTime(msg.time)
-      }, false, true); // Tham số thứ 3: isHistoryMessage
+      }, false, true);
     });
     
     chatMessages.appendChild(separator);
-    // Scroll xuống cuối
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 // ===== KẾT THÚC NHẬN LỊCH SỬ =====
 
-const bindEventHandler = (socket) => {
-  socket.on('chatHistory', showHistoryMessages);
-  // Get room and users
-  socket.on('roomUsers', ({ room, users }) => {
-    outputRoomName(room);
-    outputUsers(users);  
-  });
+// Start event listener
+chatForm.addEventListener('submit', (e) => {
+  e.preventDefault();
   
-  // Message from server
-  socket.on('message', (message) => {
-    // Kiểm tra xem có phải là message rate limit từ bot không
-    const isRateLimitMessage = message.username === 'ChatCord Bot' && 
-                                message.text.includes('sending messages too fast');
-    outputMessage(message, isRateLimitMessage);
+  // Kiểm tra rate limit
+  if (isRateLimited) {
+    return false;
+  }
+
+  let msg = getMsg(e);
+  if (!msg) {
+    return false;
+  }
   
-    // Scroll down
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    if (isRateLimitMessage) {
-      isRateLimited = true;
-      
-      // Disable form
-      const messageInput = chatForm.elements.msg;
-      const submitBtn = chatForm.querySelector('button[type="submit"]');
-      if (messageInput) messageInput.disabled = true;
-      if (submitBtn) submitBtn.disabled = true;
-      
-      // Lấy message element vừa tạo
-      const lastMessage = chatMessages.lastElementChild;
-      
-      // Tự động xóa message sau 3 giây
-      rateLimitMessageTimeout = setTimeout(() => {
-      if (lastMessage && lastMessage.parentNode) {
-          lastMessage.classList.add('fade-out');
-          
-          setTimeout(() => {
-          lastMessage.remove();
-          }, 300);
-      }
-      
-      // Enable lại form
-      isRateLimited = false;
-      if (messageInput) messageInput.disabled = false;
-      if (submitBtn) submitBtn.disabled = false;
-      }, 3000);
-    }
-  });
-
-  // Lắng nghe sự kiện rate limit từ server
-  socket.on('rateLimitExceeded', (data) => {
-    console.log('Rate limit exceeded:', data);
-  });
-}
-
-const startEventListener = (socket) => {
-  // Message submit
-  chatForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    // Get message text
-
-    // Kiểm tra rate limit
-    if (isRateLimited) {
-      return false;
-    }
-
-    let msg = getMsg(e);
-    if (!msg) {
-      return false;
-    }
-    sendMsgWithLimitCheck(e, msg, socket);
-  });
-}
+  sendMsgWithLimitCheck(e, msg);
+});
 
 const getMsg = (e) => {
-    // Get message text
     let msg = e.target.elements.msg.value;
     msg = msg.trim();
-    return msg
+    return msg;
 }
 
-const sendMsgWithLimitCheck = (e, msg, socket) => {
+const sendMsgWithLimitCheck = (e, msg) => {
   const now = Date.now();
   if (now - lastMsg.time < SOFT_DELAY) {
-    alert("Too fast. Try again later")
+    alert("Too fast. Try again later");
   } else {
-    // Emit message to server
-    socket.emit('chatMessage', msg);
+    // Send message via worker
+    chatWorker.postMessage({
+      type: 'SEND_MESSAGE',
+      data: { text: msg }
+    });
 
     // Clear input
     e.target.elements.msg.value = '';
@@ -165,7 +222,6 @@ const createMsgToast = (message, isRateLimitWarning, isHistoryMessage) => {
   const div = document.createElement('div');
   div.classList.add('message');
 
-  // Thêm class đặc biệt
   if (isRateLimitWarning) {
     div.classList.add('rate-limit-message');
   }
@@ -186,21 +242,34 @@ const createMsgToast = (message, isRateLimitWarning, isHistoryMessage) => {
   
   div.appendChild(para);
 
-  return div
+  return div;
 }
 
 const trimOldMsg = (container) => {
-  if (container.childElementCount > 100) {
-    container.removeChild(container.getElementsByTagName('div')[0])
+  if (container.childElementCount > 50) {
+    container.removeChild(container.getElementsByTagName('div')[0]);
   }
 }
 
 // Output message to DOM
+let cnt = 0;
+let start = 0;
+
 function outputMessage(message, isRateLimitWarning = false, isHistoryMessage = false) {
-  const container = document.querySelector('.chat-messages')
-  const div = createMsgToast(message, isRateLimitWarning, isHistoryMessage)
+  const container = document.querySelector('.chat-messages');
+  const div = createMsgToast(message, isRateLimitWarning, isHistoryMessage);
   trimOldMsg(container);
   container.appendChild(div);
+  cnt ++;
+  if (message.text == 'start') {
+    cnt = 0;
+    start = performance.now();
+  } else if (message.text == 'end') {
+    const end = performance.now();
+    const msg = `Processed ${cnt} messages in ${(end - start) / 1000} s. Rate: ${(cnt / (end - start) * 1000)} msg/s`;
+    const res = createMsgToast({username: 'Performance', text: msg, time: Date.now()}, false, false);
+    container.appendChild(res);
+  }
 }
 
 // Format time từ ISO string hoặc timestamp
@@ -223,19 +292,27 @@ function outputRoomName(room) {
 }
 
 // Add users to DOM
-function outputUsers(users) {
-  userList.innerHTML = '';
-  users.forEach((user) => {
-    const li = document.createElement('li');
-    li.innerText = user.username;
-    userList.appendChild(li);
-  });
+function outputUsers(usercnt) {
+  userCount.innerHTML = usercnt;
 }
 
 // Prompt the user before leave chat room
 document.getElementById('leave-btn').addEventListener('click', () => {
   const leaveRoom = confirm('Are you sure you want to leave the chatroom?');
   if (leaveRoom) {
+    // Disconnect worker before leaving
+    if (chatWorker) {
+      chatWorker.postMessage({ type: 'DISCONNECT' });
+      chatWorker.terminate();
+    }
     window.location.href = '/';
+  }
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  if (chatWorker) {
+    chatWorker.postMessage({ type: 'DISCONNECT' });
+    chatWorker.terminate();
   }
 });

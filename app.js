@@ -3,7 +3,9 @@ import http from "http";
 import authRoute from './routes/auth.js';
 import homeRoute from './routes/home.js';
 import makepath from "./configs/path.js";
-import initSocketIo from "./configs/socketio.js";
+import cors from "cors";
+// import initSocketIo from "./configs/socketio.js";
+import { Server } from "socket.io";
 import pubClient, { bindAdapter } from "./configs/redis.js";
 import bindEventHandler from "./controllers/chatroom.js";
 import { checkBlock, authenticate } from "./middlewares/auth.js";
@@ -22,13 +24,25 @@ app.use(express.static(makepath("")));
 app.use(express.json());
 app.use(authRoute);
 app.use(homeRoute);
-
+app.use("/chat", cors(
+  {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+))
 app.get('/_ah/health', (req, res) => res.status(200).send('ok'));
 
 const server = http.createServer(app);
-const io = initSocketIo(server);
-io.use(checkBlock);
-io.use(authenticate);
+// const io = initSocketIo(server);
+const io = new Server(server, {
+  transports: ['websocket'],
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+});
+// io.use(checkBlock);
+// io.use(authenticate);
 
 
 // bind socket handlers

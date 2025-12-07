@@ -2,7 +2,10 @@ const users = [];
 
 // Join user to chat
 function userJoin( socid, id, username, room) {
-  let user = users.find(user => user.id === id);
+  if (username === 'ChatCord Bot') {
+    return null;
+  }
+  let user = users.find(user => user.id === id || user.socid === socid || user.username === username);
   if (user) {
     return null;
   } else {
@@ -21,7 +24,7 @@ function getCurrentUser(socid) {
 // User leaves chat
 function userLeave(socid) {
   const index = users.findIndex(user => user.socid === socid);
-
+  console.log(users.length)
   if (index !== -1) {
     return users.splice(index, 1)[0];
   }
