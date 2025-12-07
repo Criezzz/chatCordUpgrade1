@@ -21,7 +21,5 @@ steps:
 
 timeout: 1200s
 
-substitutions:
-  _MESSAGE_HISTORY_COUNT: "100"
 options:
   logging: CLOUD_LOGGING_ONLY
