@@ -1,0 +1,56 @@
+# Node modules (will be installed in container)
+node_modules/
+npm-debug.log
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Environment & secrets (should use Secret Manager)
+.env
+.env.*
+serviceAccount/
+
+# Firebase local files
+.firebaserc
+firebase.json
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+
+# Build artifacts
+dist/
+build/
+*.log
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Documentation & config not needed in runtime
+README.md
+README-deploy.md
+LICENSE
+.editorconfig
+.prettierrc
+.eslintrc*
+tsconfig.json
+
+# Docker & Cloud Build (not needed inside container)
+Dockerfile
+.dockerignore
+docker-compose.yml
+cloudbuild.yaml
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
+__tests__/
+coverage/
