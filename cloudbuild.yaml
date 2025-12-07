@@ -22,7 +22,6 @@ steps:
 timeout: 1200s
 
 substitutions:
-  _REDIS_URL: "rediss://default:AYplAAIncDE4MzM2NmZjZTc1MDU0OTlmOWI5YmFiNTFhNGEyOTI5NnAxMzU0Mjk@wealthy-magpie-35429.upstash.io:6379"
   _MESSAGE_HISTORY_COUNT: "100"
 options:
   logging: CLOUD_LOGGING_ONLY
