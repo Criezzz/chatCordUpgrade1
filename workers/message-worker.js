@@ -1,5 +1,6 @@
 import { Worker } from 'bullmq';
 import messageService from '../services/messageService.js';
+import Redis from 'ioredis';
 
 let messageWorker = new Worker('save_queue', async (job) => {
   let { room, message } = job.data;
@@ -15,7 +16,7 @@ let messageWorker = new Worker('save_queue', async (job) => {
   }
 }, { 
   concurrency: 100, 
-  connection: process.env.REDIS_URL 
+  connection: new Redis(process.env.REDIS_URL || "redis://127.0.0.1:6379") 
 });
 
 messageWorker.on('completed', (job) => {

@@ -1,5 +1,5 @@
 // configs/redis.js
-import { createClient } from "redis";
+import Redis from "ioredis";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { config } from "dotenv";
 
@@ -11,18 +11,18 @@ const startRedis = async () => {
     console.warn("REDIS_URL not set → skip Redis adapter");
     return null;
   }
-  const tls = url.startsWith("rediss://");
-  const pubClient = createClient({ url, socket: { tls } });
+  
+  const pubClient = new Redis(url);
   
   pubClient.on("error", (e) => console.error("Redis pub error:", e));
+  
   try {
-    await pubClient.connect();
+    await pubClient.ping();
     console.log("Connected to Redis server");
-    
     return pubClient;
   } catch (e) {
     console.error("Attach Redis adapter failed, use default adapter:", e.message);
-    return null; // không throw để server vẫn chạy
+    return null;
   }
 }
 

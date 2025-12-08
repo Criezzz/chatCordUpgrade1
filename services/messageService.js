@@ -1,6 +1,7 @@
 // services/messageService.js
-import { createClient } from "redis";
+import Redis from "ioredis";
 import { Queue } from 'bullmq';
+
 const messageQueue = new Queue('save_queue', { 
   defaultJobOptions: {
     removeOnComplete: true,
@@ -12,7 +13,7 @@ const messageQueue = new Queue('save_queue', {
       maxLen: 1000,
     }
   },
-  connection: process.env.REDIS_URL
+  connection: new Redis(process.env.REDIS_URL || "redis://127.0.0.1:6379")
 });
 
 async function enqueueSaveMessage(room, message) {
@@ -41,38 +42,23 @@ async function getClient() {
   if (connectPromise) return connectPromise;
 
   const url = getRedisUrl();
-  const useTls = url.startsWith("rediss://");
-
-  const clientConfig = {
-    url,
-  };
-
-  // Only add socket config if using TLS
-  if (useTls) {
-    clientConfig.socket = {
-      tls: true,
-      rejectUnauthorized: false, // For self-signed certs in dev
-    };
-  }
-
-  const client = createClient(clientConfig);
+  const client = new Redis(url);
   
   client.on("error", (err) => {
     console.error("Redis Client Error:", err?.message || err);
   });
 
-  connectPromise = client
-    .connect()
-    .then(() => {
+  connectPromise = Promise.resolve()
+    .then(async () => {
+      await client.ping();
       redisClient = client;
-      // console.log("MessageService: Connected to Redis at", url);
       return redisClient;
     })
     .catch((e) => {
       console.error("MessageService: Redis connect failed → using memory store:", e?.message || e);
-      connectionFailed = true; // Don't retry on subsequent calls
+      connectionFailed = true;
       redisClient = null;
-      return null; // fall back to memory
+      return null;
     })
     .finally(() => {
       connectPromise = null;

@@ -1,6 +1,6 @@
 // configs/ratelimiter.js
 import { RateLimiterRedis, RateLimiterMemory } from "rate-limiter-flexible";
-import { createClient } from "redis";
+import Redis from "ioredis";
 
 let limiter = null;
 
@@ -14,12 +14,11 @@ export async function initChatLimiter() {
     return limiter;
   }
 
-  const tls = url.startsWith("rediss://");
-  const client = createClient({ url, socket: { tls } });
+  const client = new Redis(url);
   client.on("error", (e) => console.error("Redis client error:", e));
 
   try {
-    await client.connect();
+    await client.ping();
     limiter = new RateLimiterRedis({
       storeClient: client,
       keyPrefix: "chat_rate_limit",

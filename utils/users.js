@@ -1,4 +1,4 @@
-import { createClient } from "redis";
+import Redis from "ioredis";
 
 // Redis client for user management
 let redisClient = null;
@@ -14,19 +14,14 @@ async function getClient() {
   if (connectionFailed) return null;
 
   const url = process.env.REDIS_URL || "redis://127.0.0.1:6379";
-  const useTls = url.startsWith("rediss://");
-
-  const client = createClient({
-    url,
-    socket: useTls ? { tls: true, rejectUnauthorized: false } : undefined,
-  });
+  const client = new Redis(url);
 
   client.on("error", (err) => {
     console.error("Redis Users Error:", err?.message || err);
   });
 
   try {
-    await client.connect();
+    await client.ping();
     redisClient = client;
     console.log("Users: Connected to Redis at", url);
     return redisClient;
