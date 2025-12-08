@@ -1,6 +1,7 @@
 // services/messageService.js
 import Redis from "ioredis";
 import { Queue } from 'bullmq';
+import sharedConnection from '../configs/bullmq-redis.js';
 
 const messageQueue = new Queue('save_queue', { 
   defaultJobOptions: {
@@ -13,7 +14,7 @@ const messageQueue = new Queue('save_queue', {
       maxLen: 1000,
     }
   },
-  connection: new Redis(process.env.REDIS_URL || "redis://127.0.0.1:6379")
+  connection: sharedConnection
 });
 
 async function enqueueSaveMessage(room, message) {

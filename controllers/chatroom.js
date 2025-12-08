@@ -3,7 +3,7 @@ import { userJoin, getCurrentUser, userLeave, getRoomUsers } from "../utils/user
 import { initChatLimiter } from "../configs/ratelimiter.js";
 import { Worker, Queue } from 'bullmq';
 import messageService, { enqueueSaveMessage } from "../services/messageService.js";
-import Redis from "ioredis";
+import sharedConnection from '../configs/bullmq-redis.js';
 
 const botName = "ChatCord Bot";
 
@@ -12,7 +12,7 @@ let globalIo = null;
 let sendWorker = null;
 let sendQueue = new Queue('send_queue', { 
   limiter: {
-    max: 100,
+    max: 50,
     duration: 100
   },
   defaultJobOptions: {
@@ -25,7 +25,7 @@ let sendQueue = new Queue('send_queue', {
       maxLen: 1000,
     }
   },
-  connection: new Redis(process.env.REDIS_URL || "redis://127.0.0.1:6379")
+  connection: sharedConnection
 });
 let joinQueue = [];
 let joinInProgress = false;
