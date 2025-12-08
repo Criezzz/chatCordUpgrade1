@@ -2,7 +2,6 @@ import pubClient, {bindAdapter} from "./redis.js";
 import { Server } from "socket.io";
 import bindEventHandler from "../controllers/chatroom.js";
 import { checkBlock, authenticate } from "../middlewares/auth.js";
-import { bindAdapter } from "./redis.js";
 
 const initSocketIo = async (server) => {
     const io = new Server(server, {
@@ -12,7 +11,7 @@ const initSocketIo = async (server) => {
         },
         connectionStateRecovery: {},
         // transports: ['websocket'],
-        adapter: createAdapter()
+        // adapter: createAdapter()
     });
 
     await bindAdapter(pubClient, io);
