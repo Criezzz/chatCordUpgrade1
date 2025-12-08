@@ -11,10 +11,25 @@ const verifyIdToken = async (token) => {
     }
 };
 
+// Get real client IP from headers when behind proxy
+const getRealIP = (socket) => {
+    // Try various proxy headers
+    const forwarded = socket.handshake.headers['x-forwarded-for'];
+    if (forwarded) {
+        // X-Forwarded-For can be comma-separated: "client, proxy1, proxy2"
+        return forwarded.split(',')[0].trim();
+    }
+    
+    const realIP = socket.handshake.headers['x-real-ip'];
+    if (realIP) return realIP;
+    
+    // Fallback to socket address
+    return socket.handshake.address;
+};
 
 const authenticate = async (socket, next) => {
     const token = socket.handshake.auth?.token;
-    const ip = socket.handshake.address;
+    const ip = getRealIP(socket);
     if (!token) {
         await blacklist(ip);
         return next(new Error('Invalid access'))
@@ -34,7 +49,7 @@ const authenticate = async (socket, next) => {
 }
 
 const checkBlock = async (socket, next) => {
-    const ip = socket.handshake.address;
+    const ip = getRealIP(socket);
     if (await isBlocked(ip)) {
         return next(new Error("Try again later"));
     }
