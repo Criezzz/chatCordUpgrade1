@@ -31,6 +31,9 @@ self.onmessage = function(e) {
   }
 };
 
+let cnt = 0;
+// let start = 0;
+
 function initializeSocket(config) {
   // Import socket.io client in worker
   importScripts('https://cdn.socket.io/4.5.4/socket.io.min.js');
@@ -39,7 +42,7 @@ function initializeSocket(config) {
     auth: {
       token: config.token
     },
-    transports: ['websocket']
+    // transports: ['websocket']
   });
 
   // Socket event listeners
@@ -51,10 +54,17 @@ function initializeSocket(config) {
   });
 
   socket.on('message', (message) => {
+    if (message.text === 'start') {
+      start = performance.now();
+    } else if (message.text === 'end') {
+      const duration = performance.now() - start;
+      console.log(`Processed in ${duration.toFixed(2)} ms.)`);
+    }
     self.postMessage({
       type: 'MESSAGE_RECEIVED',
       data: message
     });
+    message = null;
   });
 
   socket.on('chatHistory', (messages) => {
@@ -62,13 +72,16 @@ function initializeSocket(config) {
       type: 'CHAT_HISTORY',
       data: messages
     });
+    messages = null;
   });
 
   socket.on('roomUsers', (data) => {
     self.postMessage({
+
       type: 'ROOM_USERS',
       data: data
     });
+    data = null;
   });
 
   socket.on('rateLimitExceeded', (data) => {
@@ -76,6 +89,7 @@ function initializeSocket(config) {
       type: 'RATE_LIMIT_EXCEEDED',
       data: data
     });
+    data = null;
   });
 
   socket.on('disconnect', () => {

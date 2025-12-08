@@ -1,7 +1,19 @@
 // services/messageService.js
 import { createClient } from "redis";
 import { Queue } from 'bullmq';
-const messageQueue = new Queue('save_queue', { connection: { host: '127.0.0.1', port: 6379 } });
+const messageQueue = new Queue('save_queue', { 
+  defaultJobOptions: {
+    removeOnComplete: true,
+    removeOnFail: true,
+    attempts: 1,
+  },
+  streams: {
+    events: {
+      maxLen: 1000,
+    }
+  },
+  connection: { host: '127.0.0.1', port: 6379 }
+});
 
 async function enqueueSaveMessage(room, message) {
   await messageQueue.add("save_message", { room, message });

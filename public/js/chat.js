@@ -72,6 +72,7 @@ function setupWorkerHandlers() {
         break;
       
       case 'ROOM_USERS':
+        
         outputRoomName(data.room);
         outputUsers(data.usercount);
         break;
@@ -293,6 +294,7 @@ function outputRoomName(room) {
 
 // Add users to DOM
 function outputUsers(usercnt) {
+  console.log('User count:', usercnt);
   userCount.innerHTML = usercnt;
 }
 

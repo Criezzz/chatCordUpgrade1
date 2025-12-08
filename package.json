@@ -14,7 +14,9 @@
   "author": "Brad Traversy",
   "license": "MIT",
   "dependencies": {
+    "@socket.io/cluster-adapter": "^0.3.0",
     "@socket.io/redis-adapter": "^7.1.0",
+    "@socket.io/sticky": "^1.0.4",
     "bull": "^4.16.5",
     "bullmq": "^5.65.1",
     "cors": "^2.8.5",
