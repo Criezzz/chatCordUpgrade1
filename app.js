@@ -13,15 +13,7 @@ import { setupPrimary } from '@socket.io/cluster-adapter';
 // QUAN TRỌNG: dùng PORT của Cloud Run và bind 0.0.0.0
 const PORT = Number(process.env.PORT) || 8080;
 
-if (cluster.isPrimary) {
-  const numWorkers = Math.min(availableParallelism(), 4);
-  for (let i = 0; i < numWorkers; i++) {
-    cluster.fork({
-      PORT: PORT + i
-    });
-  }
-  setupPrimary();
-} else {
+
   const app = express();
   app.use(express.static(makepath("")));
   app.use(express.json());
@@ -41,5 +33,5 @@ if (cluster.isPrimary) {
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
   });
-}
+
 

@@ -1,7 +1,8 @@
-import { createAdapter } from "@socket.io/cluster-adapter";
+import pubClient, {bindAdapter} from "./redis.js";
 import { Server } from "socket.io";
 import bindEventHandler from "../controllers/chatroom.js";
 import { checkBlock, authenticate } from "../middlewares/auth.js";
+import { bindAdapter } from "./redis.js";
 
 const initSocketIo = async (server) => {
     const io = new Server(server, {
@@ -13,6 +14,8 @@ const initSocketIo = async (server) => {
         // transports: ['websocket'],
         adapter: createAdapter()
     });
+
+    await bindAdapter(pubClient, io);
 
     io.use(checkBlock);
     io.use(authenticate);
