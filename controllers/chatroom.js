@@ -24,7 +24,7 @@ let sendQueue = new Queue('send_queue', {
       maxLen: 1000,
     }
   },
-  connection: { host: process.env.REDIS_HOST || '127.0.0.1', port: process.env.REDIS_PORT || 6379 }
+  connection: { host: process.env.REDIS_HOST || '127.0.0.1', port: Number(process.env.REDIS_PORT) || 6379 }
 });
 let joinQueue = [];
 let joinInProgress = false;
@@ -234,7 +234,7 @@ const initializeMessageConsumer = (io) => {
     }
   }, { 
     concurrency: 100, 
-    connection: { host: process.env.REDIS_HOST, port: process.env.REDIS_PORT } 
+    connection: { host: process.env.REDIS_HOST, port: Number(process.env.REDIS_PORT) } 
   });
 
   sendWorker.on('completed', (job) => {
