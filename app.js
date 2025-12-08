@@ -28,11 +28,17 @@ const PORT = Number(process.env.PORT) || 8080;
   app.get('/_ah/health', (req, res) => res.status(200).send('ok'));
   
   const server = http.createServer(app);
-  const io = await initSocketIo(server);
-  console.log('REDIS_HOST=', process.env.REDIS_HOST);
-  console.log('REDIS_PORT=', process.env.REDIS_PORT);
+  
+  // Start server immediately, init Socket.IO async
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
+  });
+  
+  // Initialize Socket.IO after server started (non-blocking)
+  initSocketIo(server).then((io) => {
+    console.log('Socket.IO initialized successfully');
+  }).catch((err) => {
+    console.error('Socket.IO initialization failed:', err);
   });
 
 

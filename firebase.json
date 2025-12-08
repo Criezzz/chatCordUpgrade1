@@ -8,11 +8,22 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "source": "/socket.io/**",
         "run": {
           "serviceId": "chatcord-backend",
           "region": "asia-east2"
         }
+      },
+      {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "chatcord-backend",
+          "region": "asia-east2"
+        }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
       }
     ]
   }
