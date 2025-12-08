@@ -14,7 +14,7 @@ steps:
       - --image=gcr.io/$PROJECT_ID/chatcord-backend
       - --region=asia-east2
       - --platform=managed
-      - --set-env-vars=REDIS_URL=${_REDIS_URL},MESSAGE_HISTORY_COUNT=${_MESSAGE_HISTORY_COUNT}
+      - --set-env-vars=REDIS_URL=${_REDIS_URL},MESSAGE_HISTORY_COUNT=${_MESSAGE_HISTORY_COUNT},REDIS_HOST=${_REDIS_HOST},REDIS_PORT=${_REDIS_PORT}
       - --set-secrets=FIREBASE_SERVICE_ACCOUNT_JSON=firebase-sa:latest
       - --allow-unauthenticated
       - --quiet

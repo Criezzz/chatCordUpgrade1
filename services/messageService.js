@@ -12,7 +12,7 @@ const messageQueue = new Queue('save_queue', {
       maxLen: 1000,
     }
   },
-  connection: { host: '127.0.0.1', port: 6379 }
+  connection: { host: process.env.REDIS_HOST, port: process.env.REDIS_PORT }
 });
 
 async function enqueueSaveMessage(room, message) {
