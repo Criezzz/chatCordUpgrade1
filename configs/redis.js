@@ -30,14 +30,8 @@ const bindAdapter = async (pubClient, io) => {
   const subClient = pubClient.duplicate();
   subClient.on("error", (e) => console.error("Redis sub error:", e));
   io.adapter(createAdapter(pubClient, subClient));
-  try {
-    await subClient.connect();
-    console.log("Socket.IO Redis adapter attached");
-    return subClient;
-  } catch (e) {
-    console.error("Attach Redis adapter failed, use default adapter:", e.message);
-    return null; // không throw để server vẫn chạy
-  }
+  console.log("Socket.IO Redis adapter attached");
+  return subClient;
 }
 
 const pubClient = await startRedis();
