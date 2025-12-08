@@ -14,15 +14,20 @@
   "author": "Brad Traversy",
   "license": "MIT",
   "dependencies": {
+    "@socket.io/cluster-adapter": "^0.3.0",
     "@socket.io/redis-adapter": "^7.1.0",
+    "@socket.io/sticky": "^1.0.4",
+    "bull": "^4.16.5",
+    "bullmq": "^5.65.1",
+    "cors": "^2.8.5",
     "dotenv": "^14.3.2",
     "express": "^4.17.1",
     "firebase": "^12.4.0",
     "firebase-admin": "^13.5.0",
     "moment": "^2.24.0",
+    "rate-limiter-flexible": "^8.1.0",
     "redis": "^4.0.2",
-    "socket.io": "^4.4.1",
-    "rate-limiter-flexible": "^8.1.0"
+    "socket.io": "^4.4.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.2"

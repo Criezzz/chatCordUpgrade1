@@ -3,54 +3,43 @@ import http from "http";
 import authRoute from './routes/auth.js';
 import homeRoute from './routes/home.js';
 import makepath from "./configs/path.js";
+import cors from "cors";
 import initSocketIo from "./configs/socketio.js";
-import pubClient, { bindAdapter } from "./configs/redis.js";
-import bindEventHandler from "./controllers/chatroom.js";
-import { checkBlock, authenticate } from "./middlewares/auth.js";
+import { availableParallelism } from 'node:os';
+import cluster from 'node:cluster';
+import { setupPrimary } from '@socket.io/cluster-adapter';
 
-// Early diagnostics to help Cloud Run troubleshooting
-console.log(`[boot] Node ${process.version} starting app.js`);
-process.on('uncaughtException', (err) => {
-  console.error('[uncaughtException]', err && (err.stack || err.message) || err);
-});
-process.on('unhandledRejection', (reason) => {
-  console.error('[unhandledRejection]', reason && (reason.stack || reason.message) || reason);
-});
-
-const app = express();
-app.use(express.static(makepath("")));
-app.use(express.json());
-app.use(authRoute);
-app.use(homeRoute);
-
-app.get('/_ah/health', (req, res) => res.status(200).send('ok'));
-
-const server = http.createServer(app);
-const io = initSocketIo(server);
-io.use(checkBlock);
-io.use(authenticate);
-
-
-// bind socket handlers
-io.on('connection', (socket) => {
-  try {
-    bindEventHandler(socket, io);
-  } catch (e) {
-    console.error('Socket bind error:', e?.message || e);
-  }
-});
-
-// start Redis adapter (non-blocking)
-try {
-  // fire and forget; internal code handles failures without crashing server
-  // no await here to ensure the HTTP server starts immediately
-  await bindAdapter(pubClient, io);
-} catch (e) {
-  console.error('startRedis failed:', e?.message || e);
-}
 
 // QUAN TRỌNG: dùng PORT của Cloud Run và bind 0.0.0.0
 const PORT = Number(process.env.PORT) || 8080;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
+
+if (cluster.isPrimary) {
+  const numWorkers = Math.min(availableParallelism(), 4);
+  for (let i = 0; i < numWorkers; i++) {
+    cluster.fork({
+      PORT: PORT + i
+    });
+  }
+  setupPrimary();
+} else {
+  const app = express();
+  app.use(express.static(makepath("")));
+  app.use(express.json());
+  app.use(authRoute);
+  app.use(homeRoute);
+  app.use("/chat", cors(
+    {
+      origin: "http://localhost:3000",
+      methods: ["GET", "POST"]
+    }
+  ))
+  app.get('/_ah/health', (req, res) => res.status(200).send('ok'));
+  
+  const server = http.createServer(app);
+  const io = await initSocketIo(server);
+  
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+

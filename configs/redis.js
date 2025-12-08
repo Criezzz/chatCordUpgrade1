@@ -18,6 +18,7 @@ const startRedis = async () => {
   try {
     await pubClient.connect();
     console.log("Connected to Redis server");
+    
     return pubClient;
   } catch (e) {
     console.error("Attach Redis adapter failed, use default adapter:", e.message);

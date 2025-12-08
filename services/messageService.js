@@ -1,5 +1,23 @@
 // services/messageService.js
 import { createClient } from "redis";
+import { Queue } from 'bullmq';
+const messageQueue = new Queue('save_queue', { 
+  defaultJobOptions: {
+    removeOnComplete: true,
+    removeOnFail: true,
+    attempts: 1,
+  },
+  streams: {
+    events: {
+      maxLen: 1000,
+    }
+  },
+  connection: { host: '127.0.0.1', port: 6379 }
+});
+
+async function enqueueSaveMessage(room, message) {
+  await messageQueue.add("save_message", { room, message });
+}
 
 // Lazy Redis client with safe fallback to in-memory storage.
 let redisClient = null;
@@ -47,7 +65,7 @@ async function getClient() {
     .connect()
     .then(() => {
       redisClient = client;
-      console.log("MessageService: Connected to Redis at", url);
+      // console.log("MessageService: Connected to Redis at", url);
       return redisClient;
     })
     .catch((e) => {
@@ -102,19 +120,21 @@ class MessageService {
       time: message.time || new Date().toISOString(),
       timestamp: Date.now(),
     };
-
+    if (message.text == 'memory') {
+      console.log(MEMORY_STORE.size);
+    }
     try {
       const client = await getClient();
       if (!client) {
         // Redis not available, use memory
         this.memoryPush(room, messageData);
-        console.log(`Saved to memory: room=${room}`);
+        // console.log(`Saved to memory: room=${room}`);
         return true;
       }
       
       const key = `chat:${room}:messages`;
       
-      console.log(`Saving message: room="${room}", key="${key}", timestamp=${messageData.timestamp}`);
+      // console.log(`Saving message: room="${room}", key="${key}", timestamp=${messageData.timestamp}`);
       
       // Add message to sorted set
       await client.zAdd(key, { 
@@ -130,7 +150,7 @@ class MessageService {
       
       // Verify it was saved
       const count = await client.zCard(key);
-      console.log(`Saved to Redis: room=${room}, key=${key}, total messages=${count}`);
+      // console.log(`Saved to Redis: room=${room}, key=${key}, total messages=${count}`);
       
       return true;
     } catch (error) {
@@ -138,7 +158,7 @@ class MessageService {
       console.error(error.stack);
       // Fallback to memory on any error
       this.memoryPush(room, messageData);
-      console.log(`Fallback to memory: room=${room}`);
+      // console.log(`Fallback to memory: room=${room}`);
       return true; // Still return true since we saved to memory
     }
   }
@@ -147,23 +167,23 @@ class MessageService {
     try {
       const client = await getClient();
       if (!client) {
-        console.log(`Using memory for getMessages: room=${room}`);
+        // console.log(`Using memory for getMessages: room=${room}`);
         return this.memoryGet(room, days, limit);
       }
       
       const key = `chat:${room}:messages`;
       const cutoffTimestamp = Date.now() - days * 24 * 60 * 60 * 1000;
       
-      console.log(`Getting messages: room=${room}, key=${key}`);
-      console.log(`  Cutoff: ${cutoffTimestamp} (${new Date(cutoffTimestamp).toISOString()})`);
-      console.log(`  Now: ${Date.now()} (${new Date().toISOString()})`);
+      // console.log(`Getting messages: room=${room}, key=${key}`);
+      // console.log(`  Cutoff: ${cutoffTimestamp} (${new Date(cutoffTimestamp).toISOString()})`);
+      // console.log(`  Now: ${Date.now()} (${new Date().toISOString()})`);
       
       // Check if key exists and get total count
       const totalCount = await client.zCard(key);
-      console.log(`  Total messages in Redis: ${totalCount}`);
+      // console.log(`  Total messages in Redis: ${totalCount}`);
       
       if (totalCount === 0) {
-        console.log(`  No messages found in Redis for room=${room}`);
+        // console.log(`  No messages found in Redis for room=${room}`);
         return [];
       }
       
@@ -171,7 +191,7 @@ class MessageService {
       let allMessages = [];
       try {
         allMessages = await client.zRange(key, 0, -1);
-        console.log(`  Retrieved all messages: ${allMessages.length}`);
+        // console.log(`  Retrieved all messages: ${allMessages.length}`);
       } catch (e) {
         console.error(`  Error getting all messages:`, e.message);
         return [];
@@ -186,11 +206,11 @@ class MessageService {
         }
       }).filter(Boolean);
 
-      console.log(`  Parsed messages: ${parsed.length}`);
+      // console.log(`  Parsed messages: ${parsed.length}`);
       
       if (parsed.length > 0) {
-        console.log(`  First message timestamp: ${parsed[0].timestamp} (${new Date(parsed[0].timestamp).toISOString()})`);
-        console.log(`  Last message timestamp: ${parsed[parsed.length-1].timestamp} (${new Date(parsed[parsed.length-1].timestamp).toISOString()})`);
+        // console.log(`  First message timestamp: ${parsed[0].timestamp} (${new Date(parsed[0].timestamp).toISOString()})`);
+        // console.log(`  Last message timestamp: ${parsed[parsed.length-1].timestamp} (${new Date(parsed[parsed.length-1].timestamp).toISOString()})`);
       }
 
       // Filter by cutoff and limit
@@ -198,8 +218,8 @@ class MessageService {
         .filter(m => m.timestamp >= cutoffTimestamp)
         .slice(-limit); // Get last N messages
       
-      console.log(`  After filter (>= ${days} days): ${filtered.length} messages`);
-      console.log(`  Returning: ${filtered.length} messages`);
+      // console.log(`  After filter (>= ${days} days): ${filtered.length} messages`);
+      // console.log(`  Returning: ${filtered.length} messages`);
       
       return filtered;
     } catch (error) {
@@ -220,7 +240,7 @@ class MessageService {
       const cutoffTimestamp = Date.now() - days * 24 * 60 * 60 * 1000;
       const deletedCount = await client.zRemRangeByScore(key, '-inf', cutoffTimestamp);
       
-      console.log(`Deleted ${deletedCount} old messages from room=${room}`);
+      // console.log(`Deleted ${deletedCount} old messages from room=${room}`);
       return deletedCount;
     } catch (error) {
       console.error("Error deleting old messages:", error?.message || error);
@@ -240,4 +260,7 @@ class MessageService {
 }
 
 const messageService = new MessageService();
+messageService.messageQueue = messageQueue; // Attach queue to service
+
 export default messageService;
+export { enqueueSaveMessage, messageQueue };

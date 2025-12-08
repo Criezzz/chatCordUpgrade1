@@ -2,12 +2,12 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBpKTmFPk2UPve75gLSZ2zOtkjwJ4lD5Ng",
-  authDomain: "device-streaming-443f3261.firebaseapp.com",
-  projectId: "device-streaming-443f3261",
-  storageBucket: "device-streaming-443f3261.firebasestorage.app",
-  messagingSenderId: "196498253672",
-  appId: "1:196498253672:web:64d9949756993d841a18dd"
+  apiKey: "AIzaSyCUWRBa5k8V9-Y9Akaciq_9K7iZFeROrRw",
+  authDomain: "webapp-69eb5.firebaseapp.com",
+  projectId: "webapp-69eb5",
+  storageBucket: "webapp-69eb5.firebasestorage.app",
+  messagingSenderId: "707131182426",
+  appId: "1:707131182426:web:bad5c901add96ff65ef763"
 };
 
 const app = initializeApp(firebaseConfig);
