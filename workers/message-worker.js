@@ -15,7 +15,7 @@ let messageWorker = new Worker('save_queue', async (job) => {
   }
 }, { 
   concurrency: 100, 
-  connection: { host: process.env.REDIS_HOST, port: Number(process.env.REDIS_PORT) } 
+  connection: process.env.REDIS_URL 
 });
 
 messageWorker.on('completed', (job) => {
