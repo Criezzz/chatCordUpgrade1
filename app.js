@@ -29,7 +29,8 @@ const PORT = Number(process.env.PORT) || 8080;
   
   const server = http.createServer(app);
   const io = await initSocketIo(server);
-  
+  console.log('REDIS_HOST=', process.env.REDIS_HOST);
+  console.log('REDIS_PORT=', process.env.REDIS_PORT);
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
   });
