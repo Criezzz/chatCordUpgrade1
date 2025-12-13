@@ -225,7 +225,7 @@ class MessageService {
       
       const key = `chat:${room}:messages`;
       const cutoffTimestamp = Date.now() - days * 24 * 60 * 60 * 1000;
-      const deletedCount = await client.zRemRangeByScore(key, '-inf', cutoffTimestamp);
+      const deletedCount = await client.zremrangebyscore(key, '-inf', cutoffTimestamp);
       
       // console.log(`Deleted ${deletedCount} old messages from room=${room}`);
       return deletedCount;

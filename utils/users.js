@@ -64,9 +64,9 @@ async function userJoin(socid, id, username, room) {
     // Store user with multiple indexes
     const userJson = JSON.stringify(user);
     await Promise.all([
-      client.setEx(`${USERS_KEY_PREFIX}id:${id}`, USER_EXPIRY, userJson),
-      client.setEx(`${USERS_KEY_PREFIX}socid:${socid}`, USER_EXPIRY, userJson),
-      client.setEx(`${USERS_KEY_PREFIX}username:${username}`, USER_EXPIRY, userJson),
+      client.setex(`${USERS_KEY_PREFIX}id:${id}`, USER_EXPIRY, userJson),
+      client.setex(`${USERS_KEY_PREFIX}socid:${socid}`, USER_EXPIRY, userJson),
+      client.setex(`${USERS_KEY_PREFIX}username:${username}`, USER_EXPIRY, userJson),
       client.sadd(`${ROOM_USERS_KEY_PREFIX}${room}`, socid),
       client.expire(`${ROOM_USERS_KEY_PREFIX}${room}`, USER_EXPIRY)
     ]);
@@ -149,7 +149,7 @@ async function getRoomUsers(room) {
     }
 
     // Get all socket IDs in the room
-    const socids = await client.sMembers(`${ROOM_USERS_KEY_PREFIX}${room}`);
+    const socids = await client.smembers(`${ROOM_USERS_KEY_PREFIX}${room}`);
     if (!socids || socids.length === 0) return [];
 
     // Get user data for each socket ID
