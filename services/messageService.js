@@ -136,7 +136,7 @@ class MessageService {
       await client.expire(key, this.MESSAGE_EXPIRY);
       
       // Verify it was saved
-      const count = await client.zCard(key);
+      const count = await client.zcard(key);
       // console.log(`Saved to Redis: room=${room}, key=${key}, total messages=${count}`);
       
       return true;
@@ -166,7 +166,7 @@ class MessageService {
       // console.log(`  Now: ${Date.now()} (${new Date().toISOString()})`);
       
       // Check if key exists and get total count
-      const totalCount = await client.zCard(key);
+      const totalCount = await client.zcard(key);
       // console.log(`  Total messages in Redis: ${totalCount}`);
       
       if (totalCount === 0) {
