@@ -29,6 +29,9 @@ let connectionFailed = false; // Track if connection permanently failed
 const MEMORY_STORE = new Map(); // room -> [{...messageData}]
 
 function getRedisUrl() {
+  if (!process.env.REDIS_URL) {
+    console.warn("[MessageService] REDIS_URL not set, using local redis://127.0.0.1:6379");
+  }
   return process.env.REDIS_URL || "redis://127.0.0.1:6379";
 }
 
@@ -123,14 +126,15 @@ class MessageService {
       
       // console.log(`Saving message: room="${room}", key="${key}", timestamp=${messageData.timestamp}`);
       
-      // Add message to sorted set
-      await client.zAdd(key, { 
-        score: messageData.timestamp, 
-        value: JSON.stringify(messageData) 
-      });
+      // Add message to sorted set (score, member)
+      await client.zadd(
+        key,
+        messageData.timestamp,
+        JSON.stringify(messageData)
+      );
       
       // Keep only last MAX_MESSAGES_PER_ROOM messages
-      await client.zRemRangeByRank(key, 0, -(this.MAX_MESSAGES_PER_ROOM + 1));
+      await client.zremrangebyrank(key, 0, -(this.MAX_MESSAGES_PER_ROOM + 1));
       
       // Set expiry on the key
       await client.expire(key, this.MESSAGE_EXPIRY);
@@ -177,7 +181,7 @@ class MessageService {
       // Get ALL messages first (ignore days filter for debugging)
       let allMessages = [];
       try {
-        allMessages = await client.zRange(key, 0, -1);
+        allMessages = await client.zrange(key, 0, -1);
         // console.log(`  Retrieved all messages: ${allMessages.length}`);
       } catch (e) {
         console.error(`  Error getting all messages:`, e.message);

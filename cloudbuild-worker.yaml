@@ -1,0 +1,25 @@
+# Cloud Build config to build and push the BullMQ message worker image
+# to Artifact Registry. Adjust _AR_REPO to your existing Docker repo name.
+
+substitutions:
+  _AR_REPO: chatcord-worker-repo
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'asia-east2-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/chatcord-message-worker'
+      - '-f'
+      - 'Dockerfile.worker'
+      - '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-east2-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/chatcord-message-worker'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1200s

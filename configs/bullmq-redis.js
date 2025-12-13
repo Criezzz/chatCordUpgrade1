@@ -3,8 +3,9 @@
 import Redis from "ioredis";
 
 const redisUrl = process.env.REDIS_URL || "redis://127.0.0.1:6379";
+const usingEnv = !!process.env.REDIS_URL;
 
-console.log('[BullMQ] Creating shared Redis connection:', redisUrl ? 'Using REDIS_URL' : 'Using localhost fallback');
+console.log('[BullMQ] Creating shared Redis connection:', usingEnv ? 'Using REDIS_URL' : 'Using localhost fallback');
 
 // Create a single shared connection
 const sharedConnection = new Redis(redisUrl, {

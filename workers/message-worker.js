@@ -55,4 +55,17 @@ messageWorker.on('failed', (job, error) => {
     console.log('[Consumer] Worker has been paused');
   });
 
+// Graceful shutdown on SIGTERM (for Cloud Run / worker pools)
+process.on('SIGTERM', async () => {
+  try {
+    console.log('[Worker] SIGTERM received, closing worker...');
+    await messageWorker.close();
+    console.log('[Worker] Worker closed, exiting process.');
+  } catch (err) {
+    console.error('[Worker] Error during shutdown:', err?.message || err);
+  } finally {
+    process.exit(0);
+  }
+});
+
 console.log('[Consumer] Message consumer initialized');
