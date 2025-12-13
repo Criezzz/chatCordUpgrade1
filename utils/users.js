@@ -67,7 +67,7 @@ async function userJoin(socid, id, username, room) {
       client.setEx(`${USERS_KEY_PREFIX}id:${id}`, USER_EXPIRY, userJson),
       client.setEx(`${USERS_KEY_PREFIX}socid:${socid}`, USER_EXPIRY, userJson),
       client.setEx(`${USERS_KEY_PREFIX}username:${username}`, USER_EXPIRY, userJson),
-      client.sAdd(`${ROOM_USERS_KEY_PREFIX}${room}`, socid),
+      client.sadd(`${ROOM_USERS_KEY_PREFIX}${room}`, socid),
       client.expire(`${ROOM_USERS_KEY_PREFIX}${room}`, USER_EXPIRY)
     ]);
 
@@ -124,7 +124,7 @@ async function userLeave(socid) {
       client.del(`${USERS_KEY_PREFIX}id:${user.id}`),
       client.del(`${USERS_KEY_PREFIX}socid:${socid}`),
       client.del(`${USERS_KEY_PREFIX}username:${user.username}`),
-      client.sRem(`${ROOM_USERS_KEY_PREFIX}${user.room}`, socid)
+      client.srem(`${ROOM_USERS_KEY_PREFIX}${user.room}`, socid)
     ]);
 
     console.log(`User left: ${user.username} from room ${user.room}`);
