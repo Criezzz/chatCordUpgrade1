@@ -5,14 +5,16 @@ import { checkBlock, authenticate } from "../middlewares/auth.js";
 
 const initSocketIo = async (server) => {
     const io = new Server(server, {
-        cors: {
-            origin: "http://localhost:3000",
-            methods: ["GET", "POST"]
-        },
-        connectionStateRecovery: {},
-        // transports: ['websocket'],
-        // adapter: createAdapter()
-    });
+  cors: {
+    origin: process.env.NODE_ENV === "production"
+      ? [
+          "https://chatcord-backend-196498253672.asia-east2.run.app"
+        ]
+      : "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
     await bindAdapter(pubClient, io);
 

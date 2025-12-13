@@ -236,13 +236,10 @@ const initializeMessageConsumer = (io) => {
     }
   }, { 
     concurrency: 100, 
-    connection: new Redis(process.env.REDIS_URL || "redis://127.0.0.1:6379", {
-      retryStrategy(times) {
-        if (times > 3) return null;
-        return Math.min(times * 200, 2000);
-      },
-      maxRetriesPerRequest: 3,
-    }) 
+    // Use the shared BullMQ Redis connection, which is
+    // configured with maxRetriesPerRequest: null as required
+    // by BullMQ.
+    connection: sharedConnection,
   });
 
   sendWorker.on('completed', (job) => {
