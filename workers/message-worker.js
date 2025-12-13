@@ -2,6 +2,8 @@ import { Worker } from 'bullmq';
 import messageService from '../services/messageService.js';
 import sharedConnection from '../configs/bullmq-redis.js';
 
+let lastDrainedLog = 0;
+
 let messageWorker = new Worker('save_queue', async (job) => {
   let { room, message } = job.data;
   if (message.text.startsWith('test ') && Number(message.text.split(' ')[1]) % 10000 === 0) {
@@ -32,7 +34,11 @@ messageWorker.on('failed', (job, error) => {
   });
 
   messageWorker.on('drained', () => {
-    console.log('[Consumer] All messages have been processed');
+    const now = Date.now();
+    if (now - lastDrainedLog > 60_000) {
+      console.log('[Consumer] Queue is empty');
+      lastDrainedLog = now;
+    }
   });
 
   messageWorker.on('stalled', (jobId) => {

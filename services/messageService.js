@@ -1,5 +1,4 @@
 // services/messageService.js
-import Redis from "ioredis";
 import { Queue } from 'bullmq';
 import sharedConnection from '../configs/bullmq-redis.js';
 
@@ -21,54 +20,15 @@ async function enqueueSaveMessage(room, message) {
   await messageQueue.add("save_message", { room, message });
 }
 
-// Lazy Redis client with safe fallback to in-memory storage.
-let redisClient = null;
-let connectPromise = null;
-let connectionFailed = false; // Track if connection permanently failed
-
 const MEMORY_STORE = new Map(); // room -> [{...messageData}]
-
-function getRedisUrl() {
-  if (!process.env.REDIS_URL) {
-    console.warn("[MessageService] REDIS_URL not set, using local redis://127.0.0.1:6379");
-  }
-  return process.env.REDIS_URL || "redis://127.0.0.1:6379";
-}
-
+// Use the shared BullMQ Redis connection for all message
+// operations. If it's not available, fall back to memory.
 async function getClient() {
-  // If already connected, return immediately
-  if (redisClient) return redisClient;
-  
-  // If connection permanently failed, skip Redis
-  if (connectionFailed) return null;
-  
-  // If connection in progress, wait for it
-  if (connectPromise) return connectPromise;
-
-  const url = getRedisUrl();
-  const client = new Redis(url);
-  
-  client.on("error", (err) => {
-    console.error("Redis Client Error:", err?.message || err);
-  });
-
-  connectPromise = Promise.resolve()
-    .then(async () => {
-      await client.ping();
-      redisClient = client;
-      return redisClient;
-    })
-    .catch((e) => {
-      console.error("MessageService: Redis connect failed → using memory store:", e?.message || e);
-      connectionFailed = true;
-      redisClient = null;
-      return null;
-    })
-    .finally(() => {
-      connectPromise = null;
-    });
-
-  return connectPromise;
+  if (!sharedConnection) {
+    console.error("[MessageService] Shared Redis connection not available, using memory store");
+    return null;
+  }
+  return sharedConnection;
 }
 
 class MessageService {
@@ -116,10 +76,7 @@ class MessageService {
     try {
       const client = await getClient();
       if (!client) {
-        // Redis not available, use memory
-        this.memoryPush(room, messageData);
-        // console.log(`Saved to memory: room=${room}`);
-        return true;
+        throw new Error('Redis unavailable');
       }
       
       const key = `chat:${room}:messages`;
@@ -155,76 +112,37 @@ class MessageService {
   }
 
   async getMessages(room, days = 7, limit = 100) {
-    try {
-      const client = await getClient();
-      if (!client) {
-        // console.log(`Using memory for getMessages: room=${room}`);
-        return this.memoryGet(room, days, limit);
-      }
-      
-      const key = `chat:${room}:messages`;
-      const cutoffTimestamp = Date.now() - days * 24 * 60 * 60 * 1000;
-      
-      // console.log(`Getting messages: room=${room}, key=${key}`);
-      // console.log(`  Cutoff: ${cutoffTimestamp} (${new Date(cutoffTimestamp).toISOString()})`);
-      // console.log(`  Now: ${Date.now()} (${new Date().toISOString()})`);
-      
-      // Check if key exists and get total count
-      const totalCount = await client.zcard(key);
-      // console.log(`  Total messages in Redis: ${totalCount}`);
-      
-      if (totalCount === 0) {
-        // console.log(`  No messages found in Redis for room=${room}`);
-        return [];
-      }
-      
-      // Get ALL messages first (ignore days filter for debugging)
-      let allMessages = [];
-      try {
-        allMessages = await client.zrange(key, 0, -1);
-        // console.log(`  Retrieved all messages: ${allMessages.length}`);
-      } catch (e) {
-        console.error(`  Error getting all messages:`, e.message);
-        return [];
-      }
-
-      // Parse all messages
-      const parsed = allMessages.map((s) => {
-        try {
-          return JSON.parse(s);
-        } catch {
-          return null;
-        }
-      }).filter(Boolean);
-
-      // console.log(`  Parsed messages: ${parsed.length}`);
-      
-      if (parsed.length > 0) {
-        // console.log(`  First message timestamp: ${parsed[0].timestamp} (${new Date(parsed[0].timestamp).toISOString()})`);
-        // console.log(`  Last message timestamp: ${parsed[parsed.length-1].timestamp} (${new Date(parsed[parsed.length-1].timestamp).toISOString()})`);
-      }
-
-      // Filter by cutoff and limit
-      const filtered = parsed
-        .filter(m => m.timestamp >= cutoffTimestamp)
-        .slice(-limit); // Get last N messages
-      
-      // console.log(`  After filter (>= ${days} days): ${filtered.length} messages`);
-      // console.log(`  Returning: ${filtered.length} messages`);
-      
-      return filtered;
-    } catch (error) {
-      console.error("Error getting messages from Redis:", error?.message || error);
-      console.error(error.stack);
-      return this.memoryGet(room, days, limit);
+  try {
+    const client = await getClient();
+    if (!client) {
+      // Redis down → degrade gracefully
+      return [];
     }
+
+    const key = `chat:${room}:messages`;
+    const cutoff = Date.now() - days * 86400_000;
+
+    const raw = await client.zrangebyscore(
+      key,
+      cutoff,
+      '+inf',
+      'LIMIT',
+      Math.max(0, -limit),
+      limit
+    );
+
+    return raw.map(JSON.parse);
+  } catch (err) {
+    console.error('[getMessages] Redis error:', err.message);
+    return [];
   }
+}
 
   async deleteOldMessages(room, days = 7) {
     try {
       const client = await getClient();
       if (!client) {
-        return this.memoryDeleteOld(room, days);
+        throw new Error('Redis unavailable');
       }
       
       const key = `chat:${room}:messages`;
@@ -241,10 +159,9 @@ class MessageService {
   
   // Helper to check connection status
   async getStatus() {
-    const client = await getClient();
     return {
-      connected: !!client,
-      usingMemory: !client,
+      connected: !!sharedConnection,
+      usingMemory: !sharedConnection,
       memoryRooms: Array.from(MEMORY_STORE.keys()),
     };
   }
