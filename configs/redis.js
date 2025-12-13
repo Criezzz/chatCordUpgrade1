@@ -12,7 +12,14 @@ const startRedis = async () => {
     return null;
   }
   
-  const pubClient = new Redis(url);
+  const pubClient = new Redis(url, {
+    retryStrategy(times) {
+      // After a few retries, stop to avoid infinite reconnect storms
+      if (times > 3) return null;
+      return Math.min(times * 200, 2000); // backoff in ms
+    },
+    maxRetriesPerRequest: 3,
+  });
   
   pubClient.on("error", (e) => console.error("Redis pub error:", e));
   
