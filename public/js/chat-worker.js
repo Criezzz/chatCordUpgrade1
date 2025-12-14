@@ -2,6 +2,7 @@
 
 let socket = null;
 let messageQueue = [];
+let buffer = [];
 let isProcessing = false;
 
 // Initialize socket connection
@@ -60,11 +61,16 @@ function initializeSocket(config) {
       const duration = performance.now() - start;
       console.log(`Processed in ${duration.toFixed(2)} ms.)`);
     }
-    self.postMessage({
-      type: 'MESSAGE_RECEIVED',
-      data: message
-    });
-    message = null;
+    buffer.push(message);
+    setInterval(() => {
+      if (buffer.length) {
+        self.postMessage({
+          type: 'MESSAGE_RECEIVED',
+          data: buffer.splice(Math.max(0, buffer.length - 100))
+        });
+        buffer = [];
+      }
+    }, 100);
   });
 
   socket.on('chatHistory', (messages) => {
