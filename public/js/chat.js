@@ -101,16 +101,18 @@ function setupWorkerHandlers() {
 }
 
 // Handle received message
-function handleMessageReceived(message) {
-  const isRateLimitMessage = message.username === 'ChatCord Bot' && 
-                              message.text.includes('sending messages too fast');
-  outputMessage(message, isRateLimitMessage);
-
-  // Scroll down
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-
-  if (isRateLimitMessage) {
-    handleRateLimitMessage();
+function handleMessageReceived(messages) {
+  for (const msg of messages) {
+    const isRateLimitMessage = msg.username === 'ChatCord Bot' && 
+                                msg.text.includes('sending messages too fast');
+    outputMessage(msg, isRateLimitMessage);
+  
+    // Scroll down
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+    if (isRateLimitMessage) {
+      handleRateLimitMessage();
+    }
   }
 }
 

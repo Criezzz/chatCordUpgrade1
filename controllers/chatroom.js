@@ -33,7 +33,7 @@ let quitInProgress = false;
 
 async function joinHandler() {
   let roomJoined = new Set();
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 100; i++) {
     if (joinQueue.length == 0) break;
     const { socket, uid, username, room } = joinQueue.shift();
     const user = await userJoin(socket.id, uid, username, room);
@@ -145,7 +145,7 @@ const getChat = (socket, io) => {
         text: msg,
         time: new Date().toISOString(), // ISO format cho time display
       }
-      await enqueueSaveMessage(user.room, messageData);
+      // await enqueueSaveMessage(user.room, messageData);
       io.to(user.room).emit("message", formatMessage(user.username, msg, messageData.time));
       // Queue message for processing (consumer will broadcast it)
       // await enqueueSendMessage("message", user.room, messageData);
@@ -221,9 +221,9 @@ const initializeMessageConsumer = (io) => {
       // Broadcast to all clients in room
       if (type == "message") {
         message = formatMessage(message.username, message.text);
-        if (message.text.startsWith('test ') && Number(message.text.split(' ')[1]) % 10000 === 0) {
-          console.log(`reach ${message.text.split(' ')[1]}`);
-        }
+        // if (message.text.startsWith('test ') && Number(message.text.split(' ')[1]) % 10000 === 0) {
+        //   console.log(`reach ${message.text.split(' ')[1]}`);
+        // }
       }
 
       io.to(room).emit(type, message);
